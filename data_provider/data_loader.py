@@ -194,6 +194,18 @@ class Dataset_ETT_minute(Dataset):
 
 
 class Dataset_Custom(Dataset):
+    '''
+    root_path: 数据集文件所在的根目录路径。
+    flag: 数据集的类型（'train'、'test' 或 'val'），默认为 'train'。
+    size: 一个包含三个整数的元组，分别表示序列长度、标签长度和预测长度。
+    features: 特征类型，'S' 表示单变量(single)，默认为 'S'。
+    data_path: 数据文件的名称，默认为 'ETTh1.csv'。
+    target: 目标变量的名称。
+    scale: 布尔值，指示是否对数据进行标准化处理。
+    timeenc: 时间编码类型(0 或 1),用于处理时间特征。
+    freq: 时间频率。
+    seasonal_patterns: 季节性模式（如果有）。
+    '''
     def __init__(self, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
                  target='OT', scale=True, timeenc=0, freq='h', seasonal_patterns=None):
@@ -223,7 +235,9 @@ class Dataset_Custom(Dataset):
         self.__read_data__()
 
     def __read_data__(self):
+        # 数据标准化实例
         self.scaler = StandardScaler()
+        # 读取数据
         df_raw = pd.read_csv(os.path.join(self.root_path,
                                           self.data_path))
 
@@ -237,6 +251,7 @@ class Dataset_Custom(Dataset):
         num_train = int(len(df_raw) * 0.7)
         num_test = int(len(df_raw) * 0.2)
         num_vali = len(df_raw) - num_train - num_test
+        # 计算数据起始点
         border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
         border2s = [num_train, num_train + num_vali, len(df_raw)]
         border1 = border1s[self.set_type]

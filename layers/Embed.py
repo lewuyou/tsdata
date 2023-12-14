@@ -118,9 +118,11 @@ class DataEmbedding(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, x_mark):
+        # 如果没有时间标记，则只使用数值嵌入和位置嵌入
         if x_mark is None:
             x = self.value_embedding(x) + self.position_embedding(x)
         else:
+            # 如果有时间标记，则使用数值嵌入、时间嵌入和位置嵌入
             x = self.value_embedding(
                 x) + self.temporal_embedding(x_mark) + self.position_embedding(x)
         return self.dropout(x)

@@ -8,13 +8,20 @@ from layers.Conv_Blocks import Inception_Block_V1
 
 def FFT_for_Period(x, k=2):
     # [B, T, C]
+    # 一维离散傅里叶变换，沿T维度[B, T, C] --> [B, T//2+1, C]
     xf = torch.fft.rfft(x, dim=1)
-    # find period by amplitudes
+    # 通过增幅寻找周期
+    # 在每个频率上的平均值,然后对所有频率取平均[B, T//2+1, C] --> [T//2+1]
     frequency_list = abs(xf).mean(0).mean(-1)
+    # 将第一个频率值设置为0(直流分量)
     frequency_list[0] = 0
+    # 在频率列表中找到前K个最大值的索引
     _, top_list = torch.topk(frequency_list, k)
+    # 将top_list张量转换为numpy数组
     top_list = top_list.detach().cpu().numpy()
+    # 通过将序列的总长度除以每个顶部频率,计算周期
     period = x.shape[1] // top_list
+    # 返回period,计算选定的顶部频率在最后一个维度C上的平均幅度[B, T//2+1, C] --> [B, k]
     return period, abs(xf).mean(-1)[:, top_list]
 
 
@@ -34,36 +41,48 @@ class TimesBlock(nn.Module):
         )
 
     def forward(self, x):
+        # 得到B, T, N
         B, T, N = x.size()
+        # 得到周期以及对应权重
         period_list, period_weight = FFT_for_Period(x, self.k)
 
         res = []
         for i in range(self.k):
+            # 取周期
             period = period_list[i]
-            # padding
+            # padding操作
             if (self.seq_len + self.pred_len) % period != 0:
                 length = (
                                  ((self.seq_len + self.pred_len) // period) + 1) * period
                 padding = torch.zeros([x.shape[0], (length - (self.seq_len + self.pred_len)), x.shape[2]]).to(x.device)
+                # 沿len维度拼接
                 out = torch.cat([x, padding], dim=1)
+            # 不需要padding
             else:
                 length = (self.seq_len + self.pred_len)
                 out = x
             # reshape
+            # 重塑[batch,length // period,period,feature] --> [batch,feature,length // period,period](深拷贝)
             out = out.reshape(B, length // period, period,
                               N).permute(0, 3, 1, 2).contiguous()
             # 2D conv: from 1d Variation to 2d Variation
+            # 进入卷积网络
             out = self.conv(out)
             # reshape back
+            # 重塑结果(batch, -1, feature)
             out = out.permute(0, 2, 3, 1).reshape(B, -1, N)
             res.append(out[:, :(self.seq_len + self.pred_len), :])
+        # 将结果沿feature维度拼接
         res = torch.stack(res, dim=-1)
         # adaptive aggregation
+        # 自适应聚合
         period_weight = F.softmax(period_weight, dim=1)
+        # 添加两个维度,重复使其与res维度一致
         period_weight = period_weight.unsqueeze(
             1).unsqueeze(1).repeat(1, T, N, 1)
+        # 沿feature维度求和
         res = torch.sum(res * period_weight, -1)
-        # residual connection
+        # 残差连接
         res = res + x
         return res
 
@@ -80,32 +99,49 @@ class Model(nn.Module):
         self.seq_len = configs.seq_len
         self.label_len = configs.label_len
         self.pred_len = configs.pred_len
+        # TimesBlock堆叠
         self.model = nn.ModuleList([TimesBlock(configs)
                                     for _ in range(configs.e_layers)])
+        # 数据进入 TimesBlock 层之前对其进行嵌入处理
         self.enc_embedding = DataEmbedding(configs.enc_in, configs.d_model, configs.embed, configs.freq,
                                            configs.dropout)
         self.layer = configs.e_layers
         self.layer_norm = nn.LayerNorm(configs.d_model)
+        # 若任务是长期预测或短期预测
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
+            # 线性层输出pred_len
             self.predict_linear = nn.Linear(
                 self.seq_len, self.pred_len + self.seq_len)
+            # 映射,线性层,输出c_out
             self.projection = nn.Linear(
                 configs.d_model, configs.c_out, bias=True)
+        # 若任务为插值或异常检测
         if self.task_name == 'imputation' or self.task_name == 'anomaly_detection':
+            # 映射,线性层，输出c_out
             self.projection = nn.Linear(
                 configs.d_model, configs.c_out, bias=True)
+        # 若任务为分类
         if self.task_name == 'classification':
+            # gelu激活函数
             self.act = F.gelu
+            # dropout层
             self.dropout = nn.Dropout(configs.dropout)
+            # 映射,线性层,输出num_class
             self.projection = nn.Linear(
                 configs.d_model * configs.seq_len, configs.num_class)
 
+    # 预测类函数
     def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
         # Normalization from Non-stationary Transformer
+        # 非稳态Transfromer标准归一化
+        # 计算均值
         means = x_enc.mean(1, keepdim=True).detach()
+        # 减去均值
         x_enc = x_enc - means
+        # 计算标准差
         stdev = torch.sqrt(
             torch.var(x_enc, dim=1, keepdim=True, unbiased=False) + 1e-5)
+        # 除以标准差
         x_enc /= stdev
 
         # embedding
@@ -115,10 +151,10 @@ class Model(nn.Module):
         # TimesNet
         for i in range(self.layer):
             enc_out = self.layer_norm(self.model[i](enc_out))
-        # porject back
+        # porject back  映射层
         dec_out = self.projection(enc_out)
 
-        # De-Normalization from Non-stationary Transformer
+        # De-Normalization from Non-stationary Transformer 非稳态Transfromer反归一化
         dec_out = dec_out * \
                   (stdev[:, 0, :].unsqueeze(1).repeat(
                       1, self.pred_len + self.seq_len, 1))
@@ -127,8 +163,11 @@ class Model(nn.Module):
                       1, self.pred_len + self.seq_len, 1))
         return dec_out
 
+    # 插补任务
     def imputation(self, x_enc, x_mark_enc, x_dec, x_mark_dec, mask):
         # Normalization from Non-stationary Transformer
+        # 非稳态Transfromer反归一化
+        # 计算均值
         means = torch.sum(x_enc, dim=1) / torch.sum(mask == 1, dim=1)
         means = means.unsqueeze(1).detach()
         x_enc = x_enc - means
@@ -155,6 +194,7 @@ class Model(nn.Module):
                       1, self.pred_len + self.seq_len, 1))
         return dec_out
 
+    # 异常预测
     def anomaly_detection(self, x_enc):
         # Normalization from Non-stationary Transformer
         means = x_enc.mean(1, keepdim=True).detach()
@@ -180,6 +220,7 @@ class Model(nn.Module):
                       1, self.pred_len + self.seq_len, 1))
         return dec_out
 
+    #分类任务
     def classification(self, x_enc, x_mark_enc):
         # embedding
         enc_out = self.enc_embedding(x_enc, None)  # [B,T,C]

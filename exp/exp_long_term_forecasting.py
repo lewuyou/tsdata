@@ -77,6 +77,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         return total_loss
 
     def train(self, setting):
+        # 取得训练、验证、测试数据及数据加载器
         train_data, train_loader = self._get_data(flag='train')
         vali_data, vali_loader = self._get_data(flag='val')
         test_data, test_loader = self._get_data(flag='test')
@@ -87,15 +88,21 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
         time_now = time.time()
 
+        # 取训练步数
         train_steps = len(train_loader)
+        # 设置早停参数
         early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)
 
+        # 选择优化器
         model_optim = self._select_optimizer()
+        # 选择损失函数
         criterion = self._select_criterion()
 
+        # 如果多GPU并行
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
 
+        # 训练次数
         for epoch in range(self.args.train_epochs):
             iter_count = 0
             train_loss = []
@@ -104,7 +111,10 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             epoch_time = time.time()
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
                 iter_count += 1
+                # 梯度归零
                 model_optim.zero_grad()
+                
+                # 取训练数据
                 batch_x = batch_x.float().to(self.device)
 
                 batch_y = batch_y.float().to(self.device)
@@ -134,12 +144,16 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     else:
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
 
+                    # 如果预测方式为MS，取最后1列否则取第1列
                     f_dim = -1 if self.args.features == 'MS' else 0
                     outputs = outputs[:, -self.args.pred_len:, f_dim:]
                     batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
+                    # 计算损失
                     loss = criterion(outputs, batch_y)
+                    # 将损失放入train_loss列表中
                     train_loss.append(loss.item())
 
+                # 记录训练过程
                 if (i + 1) % 100 == 0:
                     print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
                     speed = (time.time() - time_now) / iter_count
@@ -153,7 +167,9 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     scaler.step(model_optim)
                     scaler.update()
                 else:
+                    # 反向传播
                     loss.backward()
+                    # 更新梯度
                     model_optim.step()
 
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
@@ -168,8 +184,10 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 print("Early stopping")
                 break
 
+            # 更新学习率
             adjust_learning_rate(model_optim, epoch + 1, self.args)
 
+        # 保存模型
         best_model_path = path + '/' + 'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
 
