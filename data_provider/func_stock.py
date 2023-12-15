@@ -1,37 +1,5 @@
 '''股票相关数据处理函数'''
-import datetime
-import akshare as ak
 import pandas as pd
-
-def get_data(num, fuquan, start_date = 0, end_date = 0, time ='daily'):
-    '''下载指定时间段数据'''
-    if start_date == '0':
-        num_start_data = ak.stock_individual_info_em(symbol=num).iat[3,1]    # 开始时间选取公司信息里面的上市时间
-    else:
-        num_start_data = start_date
-    if end_date == '0':
-        num_end_data = (datetime.datetime.now()).strftime("%Y%m%d")   # 结束选择今天
-    elif end_date == '-1':
-        num_end_data = (datetime.datetime.now()-datetime.timedelta(days=1)).strftime("%Y%m%d")    # 结束选择昨天
-    else:
-        num_end_data = end_date
-    df_colum = ak.stock_zh_a_hist(symbol=num, period=time, start_date= num_start_data, end_date= num_end_data, adjust=fuquan)
-    df_resault = df_colum[['日期', '开盘', '收盘', '最高', '最低', '成交量', '振幅', '涨跌幅', '换手率']].copy()    # 只获取其中需要的数据
-    df_resault.columns = ['date', 'Open', 'Close', 'High', 'Low', 'Volume', 'Amplitude', 'Change', 'Turnover']    # 重命名表头
-    print(f'获取数据时间为： {num_start_data} - {num_end_data}')
-    return df_resault
-
-def add_lable(data, zhangfu, lable_n, lable_ch=False):
-    '''原始数据计算并添加twf参数和预测标签'''
-    data['Tom_Chg'] = (data['Close'].shift(-lable_n) - data['Close'])/ data['Close']# 计算第n天到今天收益率
-    if lable_ch:
-        data['lable'] = 0
-        # 如果第n天到今天收益率data['Tom_Chg']大于0.5，那么lable就等于1
-        data.loc[data['Tom_Chg'] >= zhangfu, 'feat'] = 1
-    else:
-        data['lable'] = data['Tom_Chg']*100
-    data = data.fillna(0)#将数据中的nan替换为0
-    return data
 
 def data_to_df(data,w,n):
     '''拼接final_data的数据*n'''
