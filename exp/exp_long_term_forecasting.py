@@ -1,3 +1,4 @@
+from torch.utils.tensorboard import SummaryWriter
 from data_provider.data_factory import data_provider
 from exp.exp_basic import Exp_Basic
 from utils.tools import EarlyStopping, adjust_learning_rate, visual
@@ -78,6 +79,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
     def train(self, setting):
         # 取得训练、验证、测试数据及数据加载器
+        writer = SummaryWriter(log_dir=os.path.join('tensorboard_logs', setting))
         train_data, train_loader = self._get_data(flag='train')
         vali_data, vali_loader = self._get_data(flag='val')
         test_data, test_loader = self._get_data(flag='test')
@@ -174,7 +176,9 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             train_loss = np.average(train_loss)
+            writer.add_scalar('Loss/train_epoch', train_loss, epoch)
             vali_loss = self.vali(vali_data, vali_loader, criterion)
+            writer.add_scalar('Loss/val', vali_loss, epoch)
             test_loss = self.vali(test_data, test_loader, criterion)
 
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
@@ -190,6 +194,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         # 保存模型
         best_model_path = path + '/' + 'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
+        writer.close()
 
         return self.model
 
