@@ -10,6 +10,7 @@ import os
 import time
 import warnings
 import numpy as np
+from tqdm import tqdm
 
 warnings.filterwarnings('ignore')
 
@@ -109,9 +110,11 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             iter_count = 0
             train_loss = []
 
-            self.model.train()
+            self.model.train() # 将模型设置为训练模式.
             epoch_time = time.time()
-            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_loader):
+            train_pbar = tqdm(train_loader, position=0, leave=True) # 载入进度条
+            
+            for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(train_pbar):
                 iter_count += 1
                 # 梯度归零
                 model_optim.zero_grad()
@@ -127,7 +130,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                 dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
                 dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
 
-                # encoder - decoder
+                # encoder - decoder 并行计算
                 if self.args.use_amp:
                     with torch.cuda.amp.autocast():
                         if self.args.output_attention:
@@ -173,6 +176,9 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     loss.backward()
                     # 更新梯度
                     model_optim.step()
+            # 在 tqdm 进度条上显示当前 epoch number和loss .
+            train_pbar.set_description(f'Epoch [{epoch+1}/{self.args.train_epochs}]') # 设置进度条的前缀
+            train_pbar.set_postfix({'loss' : loss.detach().item()}) # 设置进度条的后缀
 
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             train_loss = np.average(train_loss)

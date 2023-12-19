@@ -4,3 +4,9 @@ mse:0.8632159233093262, mae:0.6978824138641357
 long_term_forecast_Stock_96_96_TimesNet_custom_ftMS_sl96_ll48_pl1_dm32_nh8_el2_dl1_df32_fc3_ebtimeF_dtTrue_601857_0  
 mse:1.8739018440246582, mae:0.9952011108398438
 
+long_term_forecast_Stock_96_96_TimesNet_custom_ftMS_sl96_ll48_pl1_dm32_nh8_el2_dl1_df32_fc3_ebtimeF_dtTrue_601857_0  
+mse:1.5288416147232056, mae:0.909362256526947
+
+long_term_forecast_Stock_96_96_TimesNet_custom_ftMS_sl96_ll48_pl1_dm32_nh8_el2_dl1_df32_fc3_ebtimeF_dtTrue_601857_0  
+mse:1.5288416147232056, mae:0.909362256526947
+
