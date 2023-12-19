@@ -4,6 +4,7 @@ import datetime
 from data_provider.func_util import *
 from data_provider.func_stock import *
 from data_provider.func_RankGauss import *
+from data_provider.ichimoku_cloud import *
 
 from pyti.chaikin_money_flow import chaikin_money_flow as cmf
 from pyti.moving_average_convergence_divergence import moving_average_convergence_divergence as macd
@@ -13,7 +14,6 @@ from pyti.stochastic import percent_d as kdj_d
 from pyti.hull_moving_average import hull_moving_average as hma
 from pyti.exponential_moving_average import exponential_moving_average as ema
 from pyti.bollinger_bands import *
-from pyti.ichimoku_cloud import *
 from pyti.commodity_channel_index import commodity_channel_index as cci
 from pyti.williams_percent_r import williams_percent_r as wr
 from pyti.on_balance_volume import on_balance_volume as obv
@@ -75,11 +75,11 @@ def add_data(raw_data,args):
     raw_data['peboll'] = percent_bandwidth(close_data, 20)
     raw_data['pbboll'] = percent_b(close_data, 20)
     # 一目均衡表
-    # raw_data['ichimoku1'] = tenkansen(close_data)
-    # raw_data['ichimoku2'] = kijunsen(close_data)
-    # raw_data['ichimoku3'] = chiku_span(close_data)
-    # raw_data['ichimoku4'] = senkou_a(close_data)
-    # raw_data['ichimoku5'] = senkou_b(close_data)
+    raw_data['ichimoku1'] = tenkansen(close_data)
+    raw_data['ichimoku2'] = kijunsen(close_data)
+    raw_data['ichimoku3'] = chiku_span(close_data)
+    raw_data['ichimoku4'] = senkou_a(close_data)
+    raw_data['ichimoku5'] = senkou_b(close_data)
     
     '''震荡指标'''
     # Rsi  相对强弱指标
