@@ -10,6 +10,15 @@ from pyti.moving_average_convergence_divergence import moving_average_convergenc
 from pyti.relative_strength_index import  relative_strength_index as rsi
 from pyti.stochastic import percent_k as kdj_k
 from pyti.stochastic import percent_d as kdj_d
+from pyti.hull_moving_average import hull_moving_average as hma
+from pyti.exponential_moving_average import exponential_moving_average as ema
+from pyti.bollinger_bands import *
+from pyti.ichimoku_cloud import *
+from pyti.commodity_channel_index import commodity_channel_index as cci
+from pyti.williams_percent_r import williams_percent_r as wr
+from pyti.on_balance_volume import on_balance_volume as obv
+from pyti.accumulation_distribution import accumulation_distribution as acc_dist
+from pyti.chaikin_money_flow import chaikin_money_flow as cmf2
 
 def download_data(num,args):
     '''下载指定时间段数据'''
@@ -46,12 +55,57 @@ def add_data(raw_data,args):
     max_volume = volume_data.max()
     raw_data['K_volume'] = 10 * (volume_data - min_volume) / (max_volume - min_volume)
 
-    # 指标计算
-    raw_data['macd'] = macd(close_data, 12, 26)
+    '''趋势指标'''
+    # MACD
+    raw_data['macd'] = macd(close_data, 12, 26) # default: fast_period=12, slow_period=26, signal_period=9
+    raw_data['macd2'] = macd(close_data, 48, 104)
+    # 移动平均线
+    raw_data['hma10'] = hma(close_data, 10)
+    raw_data['hma20'] = hma(close_data, 20)
+    raw_data['hma50'] = hma(close_data, 50)
+    raw_data['ema10'] = ema(close_data, 10)
+    raw_data['ema20'] = ema(close_data, 20)
+    raw_data['ema50'] = ema(close_data, 50)
+    # 布林带指标
+    raw_data['upboll'] = upper_bollinger_band(close_data, 20)
+    raw_data['miboll'] = middle_bollinger_band(close_data, 20)
+    raw_data['loboll'] = lower_bollinger_band(close_data, 20)
+    raw_data['baboll'] = bandwidth(close_data, 20)
+    raw_data['bbboll'] = bb_range(close_data, 20)
+    raw_data['peboll'] = percent_bandwidth(close_data, 20)
+    raw_data['pbboll'] = percent_b(close_data, 20)
+    # 一目均衡表
+    raw_data['ichimoku1'] = tenkansen(close_data)
+    raw_data['ichimoku2'] = kijunsen(close_data)
+    raw_data['ichimoku3'] = chiku_span(close_data)
+    raw_data['ichimoku4'] = senkou_a(close_data)
+    raw_data['ichimoku5'] = senkou_b(close_data)
+    
+    '''震荡指标'''
+    # Rsi  相对强弱指标
     raw_data['rsi'] = rsi(close_data, 14)
+    # KDJ 随机指标
     raw_data['kdj_k'] = kdj_k(close_data, 9)
     raw_data['kdj_d'] = kdj_d(close_data, 9)
+    # cci 用来衡量股价是否已经偏离其平均价格
+    raw_data['cci'] = cci(close_data, high_data, low_data, 20)
+    # Williams %R 威廉指标
+    raw_data['wr'] = wr(close_data)
+    
+     '''成交量指标'''
+    # Chaikin Money Flow 蔡金货币流量指标
     raw_data['twf_feat'] = twf_feat(close_data, high_data, low_data, volume_data, 21)
+    # obv
+    raw_data['obv'] = obv(close_data, volume_data)
+    # acc_dist 累积/派发指标
+    raw_data['acc_dist'] = acc_dist(close_data, high_data, low_data, volume_data)
+    # cmf2
+    raw_data['cmf2'] = cmf2(close_data, high_data, low_data, volume_data, 20)
+    
+
+    
+    
+    
     print(f'添加数据以后形状： {raw_data.shape}')
     return raw_data
 
