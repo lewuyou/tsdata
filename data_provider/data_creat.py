@@ -75,11 +75,11 @@ def add_data(raw_data,args):
     raw_data['peboll'] = percent_bandwidth(close_data, 20)
     raw_data['pbboll'] = percent_b(close_data, 20)
     # 一目均衡表
-    raw_data['ichimoku1'] = tenkansen(close_data)
-    raw_data['ichimoku2'] = kijunsen(close_data)
-    raw_data['ichimoku3'] = chiku_span(close_data)
-    raw_data['ichimoku4'] = senkou_a(close_data)
-    raw_data['ichimoku5'] = senkou_b(close_data)
+    # raw_data['ichimoku1'] = tenkansen(close_data)
+    # raw_data['ichimoku2'] = kijunsen(close_data)
+    # raw_data['ichimoku3'] = chiku_span(close_data)
+    # raw_data['ichimoku4'] = senkou_a(close_data)
+    # raw_data['ichimoku5'] = senkou_b(close_data)
     
     '''震荡指标'''
     # Rsi  相对强弱指标
@@ -92,7 +92,7 @@ def add_data(raw_data,args):
     # Williams %R 威廉指标
     raw_data['wr'] = wr(close_data)
     
-     '''成交量指标'''
+    '''成交量指标'''
     # Chaikin Money Flow 蔡金货币流量指标
     raw_data['twf_feat'] = twf_feat(close_data, high_data, low_data, volume_data, 21)
     # obv
