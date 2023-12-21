@@ -126,6 +126,4 @@ def sub_data(data,args):
     # 指定删除不需要列
     final_data = label_data.drop(columns=args.final_data_feat, errors='ignore')
     print('删除指定行、列后数据形状: ',final_data.shape)
-    # 获取列数
-    num_columns = final_data.shape[1]
-    return final_data, num_columns
+    return final_data
