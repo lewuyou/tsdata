@@ -32,8 +32,8 @@ def twf_feat(close, high, low, valume,period=21):
     data['tr_tmp1'] = data['Close'] - data['tr_l_min'] # 计算Close减去tr_l_min的值
     data['tr_tmp2'] = data['tr_h_max'] - data['Close'] # 计算tr_h_max减去Close的值
     data['adv'] = data['Volume'] * (data['tr_tmp1'] - data['tr_tmp2']) / data['tr_c'].replace(0, 99999999) # 计算Volume*(tr_tmp1-tr_tmp2)/tr_c的值,如果tr_c为0，那就用99999999代替
-    data['vol_ma'] = 0
-    data['adv_ma'] = 0
+    data['vol_ma'] = 0.0
+    data['adv_ma'] = 0.0
     for i in range(1, len(data)):
         data.loc[[i],['vol_ma']] = data['Volume'] + data['vol_ma'].shift(1)*(period-1)/period
     for i in range(1, len(data)):
