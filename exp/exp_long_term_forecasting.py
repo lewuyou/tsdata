@@ -181,11 +181,13 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             train_pbar.set_postfix({'loss' : loss.detach().item()}) # 设置进度条的后缀
 
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
-            train_loss = np.average(train_loss)
-            writer.add_scalar('Loss/train_epoch', train_loss, epoch)
-            vali_loss = self.vali(vali_data, vali_loader, criterion)
-            writer.add_scalar('Loss/val', vali_loss, epoch)
-            test_loss = self.vali(test_data, test_loader, criterion)
+            train_loss = np.average(train_loss) # 计算平均损失
+            writer.add_scalar('Loss/train_epoch', train_loss, epoch) # 将训练损失写入tensorboard
+            print("正在计算验证集Loss...")
+            vali_loss = self.vali(vali_data, vali_loader, criterion) # 计算验证损失
+            writer.add_scalar('Loss/val', vali_loss, epoch) # 将验证损失写入tensorboard
+            print("正在计算测试集Loss...")
+            test_loss = self.vali(test_data, test_loader, criterion) # 计算测试损失
 
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
                 epoch + 1, train_steps, train_loss, vali_loss, test_loss))

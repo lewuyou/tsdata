@@ -26,10 +26,10 @@ def data_provider(args, flag):
     if flag == 'test':
         shuffle_flag = False
         drop_last = True
-        if args.task_name == 'anomaly_detection' or args.task_name == 'classification':
+        if args.task_name == 'anomaly_detection' or args.task_name == 'classification' or args.task_name == 'long_term_forecast':
             batch_size = args.batch_size
         else:
-            batch_size = 1  # bsz=1 for evaluation
+            batch_size = 1  # bsz=1 for evaluation 
         freq = args.freq
     else:
         shuffle_flag = True
