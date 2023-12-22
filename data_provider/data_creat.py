@@ -98,9 +98,9 @@ def add_data(raw_data,args):
     # obv
     # raw_data['obv'] = obv(close_data, volume_data)
     # acc_dist 累积/派发指标
-    raw_data['acc_dist'] = acc_dist(close_data, high_data, low_data, volume_data)
+    # raw_data['acc_dist'] = acc_dist(close_data, high_data, low_data, volume_data)
     # cmf2
-    raw_data['cmf2'] = cmf2(close_data, high_data, low_data, volume_data, 20)
+    # raw_data['cmf2'] = cmf2(close_data, high_data, low_data, volume_data, 20)
     
     
     print(f'添加数据以后形状： {raw_data.shape}')
@@ -127,3 +127,15 @@ def sub_data(data,args):
     final_data = label_data.drop(columns=args.final_data_feat, errors='ignore')
     print('删除指定行、列后数据形状: ',final_data.shape)
     return final_data
+
+def add_zeros_to_data(data, num_rows=20):
+    """
+    在数据的前num_rows行添加0,但保留第一列不变。
+
+    :param data: DataFrame,需要添加0的数据。
+    :param num_rows: int,需要添加0的行数。
+    :return: DataFrame,已添加0的数据。
+    """
+    data_copy = data.copy()
+    data_copy.iloc[:num_rows, 1:] = 0  # 除第一列外，前num_rows行替换为0
+    return data_copy
