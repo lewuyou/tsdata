@@ -22,13 +22,13 @@ from pyti.chaikin_money_flow import chaikin_money_flow as cmf2
 
 def download_data(num,args):
     '''下载指定时间段数据'''
-    if args.start_date == '0':
+    if args.start_date == 1:
         args.num_start_data = ak.stock_individual_info_em(symbol=num).iat[3,1]    # 开始时间选取公司信息里面的上市时间
     else:
         args.num_start_data = args.start_date
-    if args.end_date == '0':
+    if args.end_date == 1:
         args.num_end_data = (datetime.datetime.now()).strftime("%Y%m%d")   # 结束选择今天
-    elif args.end_date == '-1':
+    elif args.end_date == -1:
         args.num_end_data = (datetime.datetime.now()-datetime.timedelta(days=1)).strftime("%Y%m%d")    # 结束选择昨天
     else:
         args.num_end_data = args.end_date
