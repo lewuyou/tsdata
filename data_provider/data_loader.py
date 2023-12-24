@@ -208,7 +208,7 @@ class Dataset_Custom(Dataset):
     '''
     def __init__(self, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
-                 target='OT', scale=True, timeenc=0, freq='h', seasonal_patterns=None):
+                 target='OT', scale=True, timeenc=0, freq='h', test_ratio=0.2 , seasonal_patterns=None):
         # size [seq_len, label_len, pred_len]
         # info
         if size == None:
@@ -232,9 +232,13 @@ class Dataset_Custom(Dataset):
 
         self.root_path = root_path
         self.data_path = data_path
+        self.test_ratio = test_ratio
         self.__read_data__()
 
     def __read_data__(self):
+        '''
+        读取数据长度,区分train、test、vali三部分数据的边界
+        '''
         # 数据标准化实例
         self.scaler = StandardScaler()
         # 读取数据
@@ -247,66 +251,70 @@ class Dataset_Custom(Dataset):
         cols = list(df_raw.columns)
         cols.remove(self.target) # 移除目标特征
         cols.remove('date') # 移除日期特征
-        df_raw = df_raw[['date'] + cols + [self.target]]
-        num_train = int(len(df_raw) * 0.8)
-        num_test = int(len(df_raw) * 0.1)
+        df_raw = df_raw[['date'] + cols + [self.target]] # 重新排序以后的数据
+        
+        # 数据拆分比例
+        num_train = int(len(df_raw) * (1-self.test_ratio[0]-self.test_ratio[1]))
+        num_test = int(len(df_raw) * self.test_ratio[0])
         num_vali = len(df_raw) - num_train - num_test
-        # 计算数据起始点
-        border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
-        border2s = [num_train, num_train + num_vali, len(df_raw)]
-        border1 = border1s[self.set_type]
-        border2 = border2s[self.set_type]
+        
+        # 计算train、test、vali数据起始点，也就是拆分完的纵向数据长度
+        border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]  # [0，train长度-60，train+valid长度-60 ]
+        border2s = [num_train, num_train + num_vali, len(df_raw)] # [train长度，train+valid长度，原始长度]
+        border1 = border1s[self.set_type] # set_type {'train': 0, 'val': 1, 'test': 2} 减去输入序列长度
+        border2 = border2s[self.set_type] # set_type {'train': 0, 'val': 1, 'test': 2}
 
-        # 如果预测对象为多变量预测或多元预测单变量
+        # 如果预测对象为多变量预测或多元预测单变量，那么取除日期外得所有列为df_data
         if self.features == 'M' or self.features == 'MS':
-            # 取除日期外得所有列
             cols_data = df_raw.columns[1:]
             df_data = df_raw[cols_data]
         # 若预测类型为S(单特征预测单特征)
         elif self.features == 'S':
-            # 取特征列
             df_data = df_raw[[self.target]]
 
-        # 数据归一化
+        # 原始全部数据归一化
         if self.scale:
             train_data = df_data[border1s[0]:border2s[0]]
             self.scaler.fit(train_data.values)
             data = self.scaler.transform(df_data.values)
         else:
             data = df_data.values
-        # 取日期列
-        df_stamp = df_raw[['date']][border1:border2]
-        # 利用pandas将数据转换为日期格式
-        df_stamp['date'] = pd.to_datetime(df_stamp.date)
-        # 构建时间特征
-        if self.timeenc == 0:
+        
+        # 处理日期格式
+        df_stamp = df_raw[['date']][border1:border2] # {'train': 0, 'val': 1, 'test': 2}
+        df_stamp['date'] = pd.to_datetime(df_stamp.date)# 利用pandas将数据转换为日期格式
+        if self.timeenc == 0: # 构建时间特征
             df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
             df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
             df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
             df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
             data_stamp = df_stamp.drop(['date'], 1).values
         elif self.timeenc == 1:
-            # 时间特征构造函数，用来提取日期特征
-            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq)
-            # 转置
-            data_stamp = data_stamp.transpose(1, 0)
-        # 取数据特征列
-        self.data_x = data[border1:border2]
-        self.data_y = data[border1:border2]
+            data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq) # 时间特征构造函数，用来提取日期特征
+            data_stamp = data_stamp.transpose(1, 0)            # 转置
+        
+        # 计算train、test、vali的 X和Y部分数据长度，是相等的长度 
+        self.data_x = data[border1:border2] # {'train': 0, 'val': 1, 'test': 2}
+        self.data_y = data[border1:border2] # {'train': 0, 'val': 1, 'test': 2}
         self.data_stamp = data_stamp
-
+        
     def __getitem__(self, index):
-        # 随机取得标签
-        s_begin = index
-        # 训练区间
-        s_end = s_begin + self.seq_len
-        # 有标签区间+无标签区间(预测时间步长)
-        r_begin = s_end - self.label_len
-        r_end = r_begin + self.label_len + self.pred_len
+        '''
+        区分特征X在第几列  和 标签Y在第几列
+        label_len 滑动窗口长度 20
+        seq_len 输入序列长度 60
+        
+        预测的基本思想是将已知序列长度延长到 (seq_len+pred_len)，这是预测后的总长度。
+        '''
+        # 取得起始标签
+        s_begin = index                                  # X 的开始位置。n
+        s_end = s_begin + self.seq_len                   # X 的结束位置。开始标签 到 输入序列长度 的区间 n+60=n+60
+        r_begin = s_end - self.label_len                 # Y 的开始位置。X结束位置 减去 滑动窗口长度 n+60-20=n+40  从第40个开始是第一个Y
+        r_end = r_begin + self.label_len + self.pred_len # Y 的结束位置。Y开始位置 加上 滑动窗口长度 加上 预测长度n+40+20+1=n+61
 
         # 取训练数据
-        seq_x = self.data_x[s_begin:s_end]
-        seq_y = self.data_y[r_begin:r_end]
+        seq_x = self.data_x[s_begin:s_end] # 0：60
+        seq_y = self.data_y[r_begin:r_end] # 40：61
         # 取训练数据对应时间特征
         seq_x_mark = self.data_stamp[s_begin:s_end]
         # 取有标签区间+无标签区间(预测时间步长)对应时间特征

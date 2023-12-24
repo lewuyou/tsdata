@@ -20,8 +20,8 @@ data_dict = {
 
 
 def data_provider(args, flag):
-    Data = data_dict[args.data]
-    timeenc = 0 if args.embed != 'timeF' else 1
+    Data = data_dict[args.data] # Data就是DataSet的实例，选择不同的DataSet的处理方式（data_loader.py）
+    timeenc = 0 if args.embed != 'timeF' else 1 # 0: timeF, 1: timeE 根据 args.embed 的值决定时间编码方式
 
     if flag == 'test':
         shuffle_flag = False
@@ -71,6 +71,8 @@ def data_provider(args, flag):
     else:
         if args.data == 'm4':
             drop_last = False
+        
+        #Dataset的实例传入参数
         data_set = Data(
             root_path=args.root_path,
             data_path=args.data_path,
@@ -80,9 +82,12 @@ def data_provider(args, flag):
             target=args.target,
             timeenc=timeenc,
             freq=freq,
+            test_ratio = args.test_ratio,
             seasonal_patterns=args.seasonal_patterns
         )
         print(flag, len(data_set))
+        
+        # DataLoader的实例传入参数
         data_loader = DataLoader(
             data_set,
             batch_size=batch_size,
