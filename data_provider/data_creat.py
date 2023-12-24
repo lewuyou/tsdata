@@ -122,7 +122,12 @@ def add_label(data, args):
 
 def sub_data(data,args):
     # 删除前24行（macd算不出来）和最后的n行（最后n行未来涨跌幅是0）
-    label_data = data.iloc[25:-args.label_n, :]
+    # 根据 args.end 的值来选择正确的切片方法
+    if args.end == 0:
+        label_data = data.iloc[args.start:, :]
+    else:
+        label_data = data.iloc[args.start:-args.end, :]
+
     # 指定删除不需要列
     final_data = label_data.drop(columns=args.final_data_feat, errors='ignore')
     print('删除指定行、列后数据形状: ',final_data.shape)
