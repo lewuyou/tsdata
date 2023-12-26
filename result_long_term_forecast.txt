@@ -43,3 +43,6 @@ mse:1.1634551810857374e-07, mae:0.00028511491836979985
 long_term_forecast_stock_cy_TimesNet_custom_ftMS_sl60_ll20_pl1_dm32_nh8_el2_dl1_df32_fc3_ebtimeF_dtTrue_raw_0  
 mse:1.2103305380151141e-07, mae:0.0002902083215303719
 
+long_term_forecast_stock_cy_TimesNet_custom_ftM_sl60_ll20_pl20_dm32_nh8_el2_dl1_df32_fc3_ebtimeF_dtTrue_20231210_0  
+mse:0.5369502305984497, mae:0.4738081991672516
+
