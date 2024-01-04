@@ -208,7 +208,7 @@ class Dataset_Custom(Dataset):
     '''
     def __init__(self, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
-                 target='OT', scale=True, timeenc=0, freq='h', test_ratio=0.2 , seasonal_patterns=None):
+                 target='OT', scale=True, timeenc=0, freq='h', test_ratio=[0.2,0.1] , seasonal_patterns=None):
         # size [seq_len, label_len, pred_len]
         # info
         if size == None:

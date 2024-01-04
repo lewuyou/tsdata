@@ -216,8 +216,6 @@ class Exp_Long_Term_Forecast(Exp_Basic):
             # 修改后的代码
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth'), map_location=torch.device(device)))
-
-            
             print('加载模型结束')
 
         preds = []
@@ -228,16 +226,23 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
         self.model.eval()
         with torch.no_grad():
+            data_loader_length = len(test_loader)
             for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
+                if i < data_loader_length - 1 and self.args.pred_once:
+                    continue  # 跳过除了最后一批数据之外的所有批次
                 batch_x = batch_x.float().to(self.device)
                 batch_y = batch_y.float().to(self.device)
 
                 batch_x_mark = batch_x_mark.float().to(self.device)
                 batch_y_mark = batch_y_mark.float().to(self.device)
 
-                # decoder input 
-                dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()
-                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+                '''
+                batch_x = seq_len 60(里面包含了label_len,lable_len是已知的数据,在batch_x后跟batch_y交叉重叠的部分)
+                batch_y = label_len 20 (batch_x和batch_y交叉重叠的部分) + pred_len 20 (batch_y的后半部分)
+                decoder input 将batch_y前半部分（lable_len）保留，后面的预测长度替换成零拼接进去，形状跟batch_y相同
+                '''
+                dec_inp = torch.zeros_like(batch_y[:, -self.args.pred_len:, :]).float()  # 预测长度的零矩阵，pred_len 20 (batch_y的后半部分)
+                dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device) # 截取batch_y前半部分（lable_len 20），后面的预测长度替换成零拼接进去，形状跟batch_y 40相同
                 # encoder - decoder
                 if self.args.use_amp:
                     with torch.cuda.amp.autocast():
@@ -250,18 +255,21 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
 
                     else:
+                        # batch_x = seq_len 60,dec_inp = batch_y = label_len 20（原数据） + pred_len 20(零矩阵)
+                        # outputs 输出预测值= pred_len 20
                         outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
 
                 f_dim = -1 if self.args.features == 'MS' else 0
-                outputs = outputs[:, -self.args.pred_len:, :]
-                batch_y = batch_y[:, -self.args.pred_len:, :].to(self.device)
-                outputs = outputs.detach().cpu().numpy()
-                batch_y = batch_y.detach().cpu().numpy()
-                if test_data.scale and self.args.inverse:
+                outputs = outputs[:, -self.args.pred_len:, :] # 取outputs的后半部分（pred_len 20 预测值），相当于全取
+                batch_y = batch_y[:, -self.args.pred_len:, :].to(self.device) # 取batch_y的后半部分（pred_len 20 真实值）,形状跟outputs相同
+                outputs = outputs.detach().cpu().numpy() # 将outputs转换为numpy格式
+                batch_y = batch_y.detach().cpu().numpy() # 将batch_y转换为numpy格式
+                if test_data.scale and self.args.inverse: # 如果数据进行了归一化且需要逆归一化
                     shape = outputs.shape
                     outputs = test_data.inverse_transform(outputs.squeeze(0)).reshape(shape)
                     batch_y = test_data.inverse_transform(batch_y.squeeze(0)).reshape(shape)
         
+                # 如果预测方式为MS，取最后1列否则取全部
                 outputs = outputs[:, :, f_dim:]
                 batch_y = batch_y[:, :, f_dim:]
 
@@ -270,7 +278,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
 
                 preds.append(pred)
                 trues.append(true)
-                if i % 20 == 0:
+                if i % 20 == 0: # 每20个batch画一次图
                     input = batch_x.detach().cpu().numpy()
                     if test_data.scale and self.args.inverse:
                         shape = input.shape
@@ -279,10 +287,10 @@ class Exp_Long_Term_Forecast(Exp_Basic):
                     pd = np.concatenate((input[0, :, -1], pred[0, :, -1]), axis=0)
                     visual(gt, pd, os.path.join(folder_path, str(i) + '.pdf'))
 
-        preds = np.array(preds)
-        trues = np.array(trues)
+        preds = np.array(preds) # 将预测结果转换为numpy格式
+        trues = np.array(trues) # 将真实结果转换为numpy格式
         print('test shape:', preds.shape, trues.shape)
-        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
+        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1]) # 将预测结果转换为三维矩阵
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
         print('test shape:', preds.shape, trues.shape)
 
