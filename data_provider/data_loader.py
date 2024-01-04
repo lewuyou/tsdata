@@ -282,14 +282,22 @@ class Dataset_Custom(Dataset):
         
         # 处理日期格式
         df_stamp = df_raw[['date']][border1:border2] # {'train': 0, 'val': 1, 'test': 2}
-        df_stamp['date'] = pd.to_datetime(df_stamp.date)# 利用pandas将数据转换为日期格式
-        if self.timeenc == 0: # 构建时间特征
+        df_stamp['date'] = pd.to_datetime(df_stamp.date)# 2023/3/23--->2023-03-23
+        
+        # 构建时间特征
+        if self.timeenc == 0:
             df_stamp['month'] = df_stamp.date.apply(lambda row: row.month, 1)
             df_stamp['day'] = df_stamp.date.apply(lambda row: row.day, 1)
             df_stamp['weekday'] = df_stamp.date.apply(lambda row: row.weekday(), 1)
             df_stamp['hour'] = df_stamp.date.apply(lambda row: row.hour, 1)
             data_stamp = df_stamp.drop(['date'], 1).values
         elif self.timeenc == 1:
+            '''
+            生成三列时间特征，分别是：
+            DayOfWeek: 这个特征表示星期几，编码为从周一到周日的数值（通常是 0 到 6)并被标准化到 [-0.5, 0.5] 范围内。
+            DayOfMonth: 这个特征表示月份中的哪一天，值从 1 到月份的天数（例如 30 或 31)同样被标准化到 [-0.5, 0.5] 范围内。
+            DayOfYear: 这个特征表示一年中的哪一天，值从 1 到 365(或在闰年是 366)也被标准化到 [-0.5, 0.5] 范围内。
+            '''
             data_stamp = time_features(pd.to_datetime(df_stamp['date'].values), freq=self.freq) # 时间特征构造函数，用来提取日期特征
             data_stamp = data_stamp.transpose(1, 0)            # 转置
         
@@ -301,16 +309,16 @@ class Dataset_Custom(Dataset):
     def __getitem__(self, index):
         '''
         区分特征X在第几列  和 标签Y在第几列
-        label_len 滑动窗口长度 20
+        label_len 特征数据长度 20
         seq_len 输入序列长度 60
         
         预测的基本思想是将已知序列长度延长到 (seq_len+pred_len)，这是预测后的总长度。
         '''
         # 取得起始标签
         s_begin = index                                  # X 的开始位置。n
-        s_end = s_begin + self.seq_len                   # X 的结束位置。开始标签 到 输入序列长度 的区间 n+60=n+60
-        r_begin = s_end - self.label_len                 # Y 的开始位置。X结束位置 减去 滑动窗口长度 n+60-20=n+40  从第40个开始是第一个Y
-        r_end = r_begin + self.label_len + self.pred_len # Y 的结束位置。Y开始位置 加上 滑动窗口长度 加上 预测长度n+40+20+1=n+61
+        s_end = s_begin + self.seq_len                   # X 的结束位置。n 到 输入数据 的总长度 n+60=n+60
+        r_begin = s_end - self.label_len                 # Y 的开始位置。n 到 输入数据总长度 减去 特征数据的长度 n+60-20=n+40  就是预测数据的开始位置
+        r_end = r_begin + self.label_len + self.pred_len # Y 的结束位置。预测数据开始位置 加上 特征数据的长度 加上 预测长度n+40+20+1=n+61
 
         # 取训练数据
         seq_x = self.data_x[s_begin:s_end] # 0：60
