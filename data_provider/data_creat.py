@@ -57,7 +57,7 @@ def add_data(raw_data,args):
 
     '''趋势指标'''
     # MACD
-    raw_data['macd'] = macd(close_data, 12, 26) # default: fast_period=12, slow_period=26, signal_period=9
+    # raw_data['macd'] = macd(close_data, 12, 26) # default: fast_period=12, slow_period=26, signal_period=9
     raw_data['macd2'] = macd(close_data, 48, 104)
     # 移动平均线
     raw_data['hma10'] = hma(close_data, 10)
@@ -67,13 +67,13 @@ def add_data(raw_data,args):
     # raw_data['ema20'] = ema(close_data, 20)
     # raw_data['ema60'] = ema(close_data, 60)
     # 布林带指标
-    raw_data['upboll'] = upper_bollinger_band(close_data, 20)
-    raw_data['miboll'] = middle_bollinger_band(close_data, 20)
-    raw_data['loboll'] = lower_bollinger_band(close_data, 20)
-    raw_data['baboll'] = bandwidth(close_data, 20)
-    raw_data['bbboll'] = bb_range(close_data, 20)
-    raw_data['peboll'] = percent_bandwidth(close_data, 20)
-    raw_data['pbboll'] = percent_b(close_data, 20)
+    # raw_data['upboll'] = upper_bollinger_band(close_data, 20)
+    # raw_data['miboll'] = middle_bollinger_band(close_data, 20)
+    # raw_data['loboll'] = lower_bollinger_band(close_data, 20)
+    # raw_data['baboll'] = bandwidth(close_data, 20)
+    # raw_data['bbboll'] = bb_range(close_data, 20)
+    # raw_data['peboll'] = percent_bandwidth(close_data, 20)
+    # raw_data['pbboll'] = percent_b(close_data, 20)
     # 一目均衡表
     raw_data['ichimoku1'] = tenkansen(close_data)
     raw_data['ichimoku2'] = kijunsen(close_data)
@@ -85,12 +85,12 @@ def add_data(raw_data,args):
     # Rsi  相对强弱指标
     raw_data['rsi'] = rsi(close_data, 14)
     # KDJ 随机指标
-    raw_data['kdj_k'] = kdj_k(close_data, 9)
-    raw_data['kdj_d'] = kdj_d(close_data, 9)
+    # raw_data['kdj_k'] = kdj_k(close_data, 9)
+    # raw_data['kdj_d'] = kdj_d(close_data, 9)
     # cci 用来衡量股价是否已经偏离其平均价格
-    raw_data['cci'] = cci(close_data, high_data, low_data, 20)
+    # raw_data['cci'] = cci(close_data, high_data, low_data, 20)
     # Williams %R 威廉指标
-    raw_data['wr'] = wr(close_data)
+    # raw_data['wr'] = wr(close_data)
     
     '''成交量指标'''
     # Chaikin Money Flow 蔡金货币流量指标
