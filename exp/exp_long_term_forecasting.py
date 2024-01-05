@@ -79,6 +79,14 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         return total_loss
 
     def train(self, setting):
+        
+        # 如果是继续训练，加载模型
+        if self.args.back_training:
+            print('loading model')
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self.model.load_state_dict(torch.load(os.path.join('./checkpoints/' + setting, 'checkpoint.pth'), map_location=torch.device(device)))
+            print('加载模型结束')
+            
         # 取得训练、验证、测试数据及数据加载器
         writer = SummaryWriter(log_dir=os.path.join('tensorboard_logs', setting))
         train_data, train_loader = self._get_data(flag='train')
@@ -104,7 +112,7 @@ class Exp_Long_Term_Forecast(Exp_Basic):
         # 如果多GPU并行
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
-
+        
         # 训练次数
         for epoch in range(self.args.train_epochs):
             iter_count = 0
