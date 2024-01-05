@@ -73,3 +73,9 @@ mse:0.060282181948423386, mae:0.20354196429252625
 long_term_forecast_stock_cy_TimesNet_custom_ftMS_sl60_ll20_pl20_dm32_nh8_el2_dl1_df32_fc3_ebtimeF_dtTrue_20231210_0  
 mse:82.67498779296875, mae:9.092263221740723
 
+long_term_forecast_stock_cy_TimesNet_custom_ftM_sl60_ll20_pl5_dm128_nh8_el2_dl1_df128_fc3_ebtimeF_dtTrue_20240105_0  
+mse:12.707257270812988, mae:1.3863531351089478
+
+long_term_forecast_stock_cy_TimesNet_custom_ftMS_sl60_ll20_pl5_dm128_nh8_el2_dl1_df128_fc3_ebtimeF_dtTrue_20240105_0  
+mse:8.481348991394043, mae:2.6428961753845215
+
